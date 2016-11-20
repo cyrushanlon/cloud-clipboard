@@ -1,28 +1,27 @@
 package main
 
 import (
-
-)
-import (
-	"sync"
-	"net"
-	"log"
 	"io"
+	"log"
+	"net"
+	"sync"
+
 	"github.com/atotto/clipboard"
-	"time"
+
 	"bytes"
+	"time"
 )
 
 var (
-	ServerIP = "192.168.1.236:6263"
+	ServerIP = "localhost:6264"
 )
 
-type CurrentClipboard struct{
-	text string
+type CurrentClipboard struct {
+	text  string
 	mutex sync.Mutex
 }
 
-func(cb*CurrentClipboard)SetText(Text string){
+func (cb *CurrentClipboard) SetText(Text string) {
 	cb.mutex.Lock()
 
 	cb.text = Text
@@ -30,7 +29,7 @@ func(cb*CurrentClipboard)SetText(Text string){
 	cb.mutex.Unlock()
 }
 
-func(cb*CurrentClipboard)GetText()string{
+func (cb *CurrentClipboard) GetText() string {
 	cb.mutex.Lock()
 
 	Text := cb.text
@@ -55,6 +54,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Println("Listening to localhost:6263")
 
 		for {
 			conn, err := ln.Accept()
@@ -62,11 +62,15 @@ func main() {
 				log.Println(err)
 			}
 
+			log.Println("got a connection")
+
 			//blocking read
 			var buf bytes.Buffer
 			io.Copy(&buf, conn)
 
-			if buf.Len() == 0 {continue} else {
+			if buf.Len() == 0 {
+				continue
+			} else {
 
 				log.Println("Setting Clipboard")
 
