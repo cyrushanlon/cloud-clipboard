@@ -54,7 +54,7 @@ func ServeConnection(conn net.Conn, addr string) {
 			continue
 		} else {
 
-			log.Println("Setting Clipboard to", string(buffer), "on", addr)
+			log.Println("Setting Clipboard on", addr)
 
 			outconn, err := net.Dial("tcp4", addr + ":6264")
 			if err != nil {
@@ -89,7 +89,7 @@ func ServeConnection(conn net.Conn, addr string) {
 				}()
 			}
 			wg2.Wait()
-			*/
+*/
 		}
 	}
 	wg.Done()
