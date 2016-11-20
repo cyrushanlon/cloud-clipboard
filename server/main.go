@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ClientIPs = []string{}
+//	ClientIPs = []string{}
 	wg sync.WaitGroup
 )
 
@@ -32,25 +32,14 @@ func main() {
 
 			newAdd := strings.Split(conn.RemoteAddr().String(), ":")[0]
 
-			in := false
-			for _ , v := range ClientIPs{
-				if v == newAdd {
-					in = true
-					break
-				}
-			}
-			if !in {
-				ClientIPs = append(ClientIPs, newAdd)
-			}
-
 			wg.Add(1)
 			log.Println("serving", newAdd)
-			go ServeConnection(conn)
+			go ServeConnection(conn, newAdd)
 		}
 	}
 }
 
-func ServeConnection(conn net.Conn) {
+func ServeConnection(conn net.Conn, addr string) {
 	//serve the connection
 	for {
 		buffer := make([]byte, 4096)
@@ -65,8 +54,20 @@ func ServeConnection(conn net.Conn) {
 			continue
 		} else {
 
-			log.Println("Setting Clipboard to", string(buffer))
+			log.Println("Setting Clipboard to", string(buffer), "on", addr)
 
+			outconn, err := net.Dial("tcp4", addr + ":6264")
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			n, err := outconn.Write(buffer)
+			if err != nil {
+				log.Println("n:", n, err)
+			}
+			outconn.Close()
+/*
 			var wg2 sync.WaitGroup
 
 			wg2.Add(len(ClientIPs))
@@ -87,8 +88,8 @@ func ServeConnection(conn net.Conn) {
 					wg2.Done()
 				}()
 			}
-
 			wg2.Wait()
+			*/
 		}
 	}
 	wg.Done()
