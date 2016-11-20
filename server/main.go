@@ -5,20 +5,16 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strings"
 )
 
 var (
-	ClientIP = "192.168.1.235:6264"
+	ClientIPs = []string{}
 )
 
 func main() {
 
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-
-	//recieve new clipboard item
-	go func() {
+	for {
 
 		ln, err := net.Listen("tcp4", ":6263")
 		if err != nil {
@@ -34,10 +30,22 @@ func main() {
 				log.Println(err)
 			}
 
-			log.Println(conn.RemoteAddr().String())
+			newAdd := strings.Split(conn.RemoteAddr().String(), ":")[0]
 
+			in := false
+			for _ , v := range ClientIPs{
+				if v == newAdd {
+					in = true
+					break
+				}
+			}
+
+			if !in {
+				ClientIPs = append(ClientIPs, newAdd)
+			}
+
+			//serve the connection
 			for {
-
 				buffer := make([]byte, 4096)
 				n, err := conn.Read(buffer)
 				if err != nil {
@@ -50,25 +58,32 @@ func main() {
 				} else {
 
 					log.Println("Setting Clipboard to", string(buffer))
-					//Send new item to all clients (just 1 fixed 1 one for now)
-					outconn, err := net.Dial("tcp4", ClientIP)
-					if err != nil {
-						log.Println(err)
-						continue
+
+					var wg2 sync.WaitGroup
+
+					wg2.Add(len(ClientIPs))
+					for _, v := range(ClientIPs) {
+						go func() {
+							outconn, err := net.Dial("tcp4", v+":6264")
+							if err != nil {
+								log.Println(err)
+								wg2.Done()
+								return
+							}
+
+							n, err := outconn.Write(buffer)
+							if err != nil {
+								log.Println("n:", n, err)
+							}
+							outconn.Close()
+							wg2.Done()
+						}()
 					}
 
-					n, err := outconn.Write(buffer)
-					if err != nil {
-						log.Println("n:", n, err)
-					}
-					outconn.Close()
+					wg2.Wait()
 				}
 			}
 			time.Sleep(1 * time.Second)
 		}
-
-		wg.Done()
-	}()
-
-	wg.Wait()
+	}
 }
