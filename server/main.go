@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ClientIP = "localhost:6263"
+	ClientIP = "192.168.1.235:6264"
 )
 
 func main() {
@@ -20,14 +20,15 @@ func main() {
 	//recieve new clipboard item
 	go func() {
 
-		ln, err := net.Listen("tcp4", "localhost:6264")
+		ln, err := net.Listen("tcp4", ":6263")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Println("Listening to 0.0.0.0:6263")
+		log.Println("Listening to localhost:6263")
 
 		for {
+			log.Println("Waiting to accept a connection")
 			conn, err := ln.Accept()
 			if err != nil {
 				log.Println(err)
@@ -41,7 +42,7 @@ func main() {
 				n, err := conn.Read(buffer)
 				if err != nil {
 					log.Println(err)
-					continue
+					break
 				}
 
 				if n == 0 {
@@ -60,6 +61,7 @@ func main() {
 					if err != nil {
 						log.Println("n:", n, err)
 					}
+					outconn.Close()
 				}
 			}
 			time.Sleep(1 * time.Second)
