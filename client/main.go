@@ -1,19 +1,15 @@
 package main
 
 import (
-	"io"
+	"github.com/atotto/clipboard"
 	"log"
 	"net"
 	"sync"
-
-	"github.com/atotto/clipboard"
-
-	"bytes"
 	"time"
 )
 
 var (
-	ServerIP = "localhost:6264"
+	ServerIP = "192.168.1.237:6263"
 )
 
 type CurrentClipboard struct {
@@ -50,11 +46,11 @@ func main() {
 	//serve clipboard in
 	go func() {
 
-		ln, err := net.Listen("tcp", "localhost:6263")
+		ln, err := net.Listen("tcp4", ":6264")
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Listening to localhost:6263")
+		log.Println("Listening to :6264")
 
 		for {
 			conn, err := ln.Accept()
@@ -64,20 +60,27 @@ func main() {
 
 			log.Println("got a connection")
 
-			//blocking read
-			var buf bytes.Buffer
-			io.Copy(&buf, conn)
+			for {
 
-			if buf.Len() == 0 {
-				continue
-			} else {
+				//blocking read
+				buffer := make([]byte, 4096)
+				n, err := conn.Read(buffer)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
 
-				log.Println("Setting Clipboard")
+				if n == 0 {
+					continue
+				} else {
 
-				clipboard.WriteAll(buf.String())
-				cb.SetText(buf.String())
+					log.Println("Setting Clipboard")
+
+					clipboard.WriteAll(string(buffer))
+					cb.SetText(string(buffer))
+				}
+				time.Sleep(1 * time.Second)
 			}
-			time.Sleep(1 * time.Second)
 		}
 
 		wg.Done()
@@ -86,27 +89,32 @@ func main() {
 	//serve clipboard out
 	go func() {
 
-		conn, err := net.Dial("tcp", ServerIP)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		for {
-			ReadClipBoard, err := clipboard.ReadAll()
+
+			conn, err := net.Dial("tcp", ServerIP)
 			if err != nil {
 				log.Println(err)
+				time.Sleep(1*time.Second)
 				continue
 			}
 
-			if ReadClipBoard != cb.GetText() {
+			for {
+				ReadClipBoard, err := clipboard.ReadAll()
+				if err != nil {
+					log.Println(err)
+					time.Sleep(1*time.Second)
+					continue
+				}
 
-				log.Println("Sending Clipboard")
-				cb.SetText(ReadClipBoard)
-				conn.Write([]byte(ReadClipBoard))
+				if ReadClipBoard != cb.GetText() {
+
+					log.Println("Sending Clipboard")
+					cb.SetText(ReadClipBoard)
+					conn.Write([]byte(ReadClipBoard))
+				}
+
+				time.Sleep(1 * time.Second)
 			}
-
-			time.Sleep(1 * time.Second)
 		}
 
 		wg.Done()
