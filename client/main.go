@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ServerIP = "192.168.1.237:6263"
+	ServerIP = "192.168.1.236:6263"
 )
 
 type CurrentClipboard struct {
@@ -54,6 +54,8 @@ func main() {
 		log.Println("Listening to :6264")
 
 		for {
+			log.Println("Waiting for a connection...")
+
 			conn, err := ln.Accept()
 			if err != nil {
 				if err != io.EOF {
@@ -62,7 +64,7 @@ func main() {
 				continue
 			}
 
-			log.Println("got a connection")
+			log.Println("got a connection!")
 
 			for {
 				//blocking read
@@ -85,10 +87,9 @@ func main() {
 				}
 
 				if len(buffSlice) == 0 {
-					log.Println("Connection.Read got nothing")
 					break
 				} else {
-					log.Println("Setting Clipboard to", string(buffSlice), len(buffSlice))
+					log.Println("Setting Clipboard to", string(buffSlice))
 
 					clipboard.WriteAll(string(buffSlice))
 					cb.SetText(string(buffSlice))
