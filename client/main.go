@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"io"
 )
 
 var (
@@ -55,31 +56,46 @@ func main() {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				log.Println(err)
+				if err != io.EOF {
+					log.Println( err)
+				}
+				continue
 			}
 
 			log.Println("got a connection")
 
 			for {
-
 				//blocking read
-				buffer := make([]byte, 4096)
-				n, err := conn.Read(buffer)
+				buffer := make([]byte, 20000)
+				buffSlice := []byte{}
+				_, err := conn.Read(buffer)
+
 				if err != nil {
-					log.Println(err)
-					continue
+					if err != io.EOF {
+						log.Println(err)
+					}
+					break
 				}
 
-				if n == 0 {
-					continue
+				for k, v := range buffer {
+					if v == 0 {
+						buffSlice = buffer[:k]
+						break
+					}
+				}
+
+				if len(buffSlice) == 0 {
+					log.Println("Connection.Read got nothing")
+					break
 				} else {
+					log.Println("Setting Clipboard to", string(buffSlice), len(buffSlice))
 
-					log.Println("Setting Clipboard")
+					clipboard.WriteAll(string(buffSlice))
+					cb.SetText(string(buffSlice))
 
-					clipboard.WriteAll(string(buffer))
-					cb.SetText(string(buffer))
+					time.Sleep(1 * time.Second)
 				}
-				time.Sleep(1 * time.Second)
+
 			}
 		}
 
