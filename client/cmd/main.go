@@ -1,46 +1,24 @@
 package main
 
 import (
-	"github.com/atotto/clipboard"
-	"log"
-	"net"
-	"sync"
-	"time"
-	"io"
+	"github.com/cyrushanlon/cloud-clipboard/client"
 )
 
 var (
 	ServerIP = "192.168.1.236:6263"
 )
 
-type CurrentClipboard struct {
-	text  string
-	mutex sync.Mutex
+func main() {
+	go client.LookForClients()
+	client.ListenForClients()
 }
 
-func (cb *CurrentClipboard) SetText(Text string) {
-	cb.mutex.Lock()
-
-	cb.text = Text
-
-	cb.mutex.Unlock()
-}
-
-func (cb *CurrentClipboard) GetText() string {
-	cb.mutex.Lock()
-
-	Text := cb.text
-
-	cb.mutex.Unlock()
-
-	return Text
-}
-
+/*
 func main() {
 
 	var wg sync.WaitGroup
 
-	cb := CurrentClipboard{}
+	cb := client.CurrentClipboard{}
 
 	wg.Add(2)
 
@@ -140,3 +118,4 @@ func main() {
 	wg.Wait()
 
 }
+*/
