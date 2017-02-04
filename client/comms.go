@@ -29,7 +29,10 @@ func ListenForClients() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.SetReadBuffer(maxReadBuffer)
+	err = c.SetReadBuffer(maxReadBuffer)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Println("Looking for clients.")
 	for {
@@ -49,11 +52,17 @@ func LookForClients() {
 		log.Fatal(err)
 	}
 	c, err := net.DialUDP("udp", nil, addr)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Println("Looking for servers.")
 	for {
 		//log.Println("LFC - Sending Ping")
-		c.Write([]byte("add"))
+		_, err := c.Write([]byte("add"))
+		if err != nil {
+			log.Fatal(err)
+		}
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -78,7 +87,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 }
 
 func receiveClipboard(serverIP string) {
-	ln, err := net.Listen("tcp4", ":6264")
+	ln, err := net.Listen("tcp4", ":6263")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -122,12 +131,14 @@ func receiveClipboard(serverIP string) {
 			} else {
 				log.Println("Setting Clipboard to", string(buffSlice))
 
-				clipboard.WriteAll(string(buffSlice))
+				err := clipboard.WriteAll(string(buffSlice))
+				if err != nil {
+					log.Fatal(err)
+				}
 				cb.SetText(string(buffSlice))
 
 				time.Sleep(1 * time.Second)
 			}
-
 		}
 	}
 }
@@ -153,7 +164,11 @@ func serveClipboard(serverIP string) {
 
 				log.Println("Sending Clipboard")
 				cb.SetText(ReadClipBoard)
-				conn.Write([]byte(ReadClipBoard))
+
+				_, err := conn.Write([]byte(ReadClipBoard))
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 
 			time.Sleep(1 * time.Second)
