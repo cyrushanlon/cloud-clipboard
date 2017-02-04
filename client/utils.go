@@ -1,20 +1,8 @@
 package client
 
-import (
-	"encoding/hex"
-	"log"
-	"net"
-	"time"
-)
+import "net"
 
-const (
-	address       = "232.49.101.200:6964"
-	maxReadBuffer = 8192
-)
-
-//holds a list of active clients
-var ClientList []string
-
+//StringArrayContains returns if the slice contains a target string
 func StringArrayContains(list []string, target string) bool {
 	for i := 0; i < len(list); i++ {
 		if list[i] == target {
@@ -24,6 +12,7 @@ func StringArrayContains(list []string, target string) bool {
 	return false
 }
 
+//StringArrayRemove removes target string from slice
 func StringArrayRemove(list *[]string, target string) {
 	for i := 0; i < len(*list); i++ {
 		if (*list)[i] == target {
@@ -34,52 +23,19 @@ func StringArrayRemove(list *[]string, target string) {
 	}
 }
 
-func msgHandler(src *net.UDPAddr, n int, b []byte) {
-	//log.Println(n, "bytes read from", src)
-	//log.Println()
-	body := hex.Dump(b[:n])
-	if body == "remove" {
-		StringArrayRemove(&ClientList, src.String())
-	} else if body == "add" {
-		if !StringArrayContains(ClientList, src.String()) { //add if it isnt already in
-			ClientList = append(ClientList, src.String())
+// GetLocalIP returns the non loopback local IP of the host
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
 		}
 	}
-}
-
-func ListenForClients() {
-	addr, err := net.ResolveUDPAddr("udp", address)
-	if err != nil {
-		log.Fatal(err)
-	}
-	c, err := net.ListenMulticastUDP("udp", nil, addr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	c.SetReadBuffer(maxReadBuffer)
-
-	log.Println("Looking for clients.")
-	for {
-		b := make([]byte, maxReadBuffer)
-		n, src, err := c.ReadFromUDP(b)
-		if err != nil {
-			log.Fatal("ReadFromUDP failed:", err)
-		}
-		msgHandler(src, n, b)
-	}
-}
-
-func LookForClients() {
-	addr, err := net.ResolveUDPAddr("udp", address)
-	if err != nil {
-		log.Fatal(err)
-	}
-	c, err := net.DialUDP("udp", nil, addr)
-
-	log.Println("Looking for servers.")
-	for {
-		log.Println("LFC - Sending Ping")
-		c.Write([]byte("add"))
-		time.Sleep(1 * time.Second)
-	}
+	return ""
 }
