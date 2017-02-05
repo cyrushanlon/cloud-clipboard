@@ -1,7 +1,6 @@
 package client
 
 import (
-	"io"
 	"log"
 	"net"
 	"time"
@@ -19,19 +18,49 @@ const (
 	maxReadBuffer = 8192
 )
 
-//ListenForClients waits for a UDP packet to come in and registers/removes the client as required
-func ListenForClients() {
+//Run looks and listens for cloud-clipboard clients
+func Run() {
+
+	go func() {
+		//get remote clipboard
+		err := receiveClipboard()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+	//get multicasts
+	go func() {
+		for {
+			err := listenForClients()
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}()
+
+	//send multicasts
+	for {
+		err := lookForClients()
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+//listenForClients waits for a UDP packet to come in and registers/removes the client as required
+func listenForClients() error {
 	addr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		log.Fatal(err)
+		return err //log.Println(err)
 	}
 	c, err := net.ListenMulticastUDP("udp", nil, addr)
 	if err != nil {
-		log.Fatal(err)
+		return err //log.Println(err)
 	}
 	err = c.SetReadBuffer(maxReadBuffer)
 	if err != nil {
-		log.Fatal(err)
+		return err //log.Println(err)
 	}
 
 	log.Println("Looking for clients.")
@@ -39,21 +68,21 @@ func ListenForClients() {
 		b := make([]byte, maxReadBuffer)
 		n, src, err := c.ReadFromUDP(b)
 		if err != nil {
-			log.Fatal("ReadFromUDP failed:", err)
+			return err //log.Fatal("ReadFromUDP failed:", err)
 		}
 		msgHandler(src, n, b)
 	}
 }
 
-//LookForClients sends out UDP packets in the hope of finding other clients
-func LookForClients() {
+//lookForClients sends out UDP packets in the hope of finding other clients
+func lookForClients() error {
 	addr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		log.Fatal(err)
+		return err //log.Println(err)
 	}
 	c, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
-		log.Fatal(err)
+		return err //log.Println(err)
 	}
 
 	log.Println("Looking for servers.")
@@ -61,7 +90,7 @@ func LookForClients() {
 		//log.Println("LFC - Sending Ping")
 		_, err := c.Write([]byte("add"))
 		if err != nil {
-			log.Fatal(err)
+			return err //log.Println(err)
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -76,107 +105,123 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	body := string(b[:n])
 	if body == "remove" {
 		log.Println("Removing client", src)
-		StringArrayRemove(&clientList, src.String())
+		StringArrayRemove(&clientList, src.IP.String())
 	} else if body == "add" {
-		if !StringArrayContains(clientList, src.String()) { //add if it isnt already in
-			clientList = append(clientList, src.String())
-			log.Println("Adding client", src)
+		if !StringArrayContains(clientList, src.IP.String()) { //add if it isnt already in
+			clientList = append(clientList, src.IP.String())
+			//log.Println("Adding client", src.IP.String())
 			go handleClient(src.IP.String())
 		}
 	}
 }
 
-func receiveClipboard(serverIP string) {
+func receiveClipboard() error {
 	ln, err := net.Listen("tcp4", ":6263")
+
+	//clean up the listener after
+	defer func() {
+		if ln != nil {
+			err = ln.Close()
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}()
+
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	log.Println("Listening to :6264")
 
-	for {
-		log.Println("Waiting for a connection...")
+	log.Println("Waiting for a connection...")
+	conn, err := ln.Accept()
+	if err != nil {
+		return err
+	}
 
-		conn, err := ln.Accept()
-		if err != nil {
-			if err != io.EOF {
+	//clean up the connection after
+	defer func() {
+		if conn != nil {
+			err = conn.Close()
+			if err != nil {
 				log.Println(err)
 			}
-			continue
+		}
+	}()
+	log.Println("got a connection!")
+
+	for {
+		//blocking read
+		buffer := make([]byte, 20000)
+		buffSlice := []byte{}
+
+		_, err := conn.Read(buffer)
+		if err != nil {
+			return err
 		}
 
-		log.Println("got a connection!")
+		for k, v := range buffer {
+			if v == 0 {
+				buffSlice = buffer[:k]
+				break
+			}
+		}
 
-		for {
-			//blocking read
-			buffer := make([]byte, 20000)
-			buffSlice := []byte{}
-			_, err := conn.Read(buffer)
+		if len(buffSlice) == 0 {
+			//break
+		} else {
+			log.Println("Setting Clipboard to", string(buffSlice))
 
+			err := clipboard.WriteAll(string(buffSlice))
 			if err != nil {
-				if err != io.EOF {
-					log.Println(err)
-				}
-				break
+				return err
 			}
+			cb.SetText(string(buffSlice))
 
-			for k, v := range buffer {
-				if v == 0 {
-					buffSlice = buffer[:k]
-					break
-				}
-			}
-
-			if len(buffSlice) == 0 {
-				break
-			} else {
-				log.Println("Setting Clipboard to", string(buffSlice))
-
-				err := clipboard.WriteAll(string(buffSlice))
-				if err != nil {
-					log.Fatal(err)
-				}
-				cb.SetText(string(buffSlice))
-
-				time.Sleep(1 * time.Second)
-			}
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
 
-func serveClipboard(serverIP string) {
+func serveClipboard(serverIP string) error {
+	conn, err := net.Dial("tcp", serverIP+":6263")
+	if err != nil {
+		return err
+	}
+
 	for {
-		conn, err := net.Dial("tcp", serverIP+":6263")
+		ReadClipBoard, err := clipboard.ReadAll()
 		if err != nil {
 			log.Println(err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
-		for {
-			ReadClipBoard, err := clipboard.ReadAll()
+		if ReadClipBoard != cb.GetText() {
+
+			log.Println("Sending Clipboard")
+			cb.SetText(ReadClipBoard)
+
+			_, err := conn.Write([]byte(ReadClipBoard))
 			if err != nil {
-				log.Println(err)
-				time.Sleep(1 * time.Second)
-				continue
+				return err
 			}
-
-			if ReadClipBoard != cb.GetText() {
-
-				log.Println("Sending Clipboard")
-				cb.SetText(ReadClipBoard)
-
-				_, err := conn.Write([]byte(ReadClipBoard))
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			time.Sleep(1 * time.Second)
 		}
+
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func handleClient(serverIP string) {
-	go receiveClipboard(serverIP)
-	serveClipboard(serverIP)
+
+	//send clipboard to clients
+	for {
+		err := serveClipboard(serverIP)
+		if err != nil {
+			//check if the error means that the target is offline
+			//log.Println(err, reflect.TypeOf(err))
+			log.Println(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
