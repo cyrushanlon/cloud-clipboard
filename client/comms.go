@@ -5,6 +5,8 @@ import (
 	"net"
 	"time"
 
+	"strings"
+
 	"github.com/atotto/clipboard"
 )
 
@@ -14,12 +16,13 @@ var (
 )
 
 const (
-	address       = "232.49.101.200:6964"
 	maxReadBuffer = 8192
 )
 
 //Run looks and listens for cloud-clipboard clients
 func Run() {
+
+	Conf.Load()
 
 	go func() {
 		//get remote clipboard
@@ -50,7 +53,7 @@ func Run() {
 
 //listenForClients waits for a UDP packet to come in and registers/removes the client as required
 func listenForClients() error {
-	addr, err := net.ResolveUDPAddr("udp", address)
+	addr, err := net.ResolveUDPAddr("udp", Conf.MulticastIP)
 	if err != nil {
 		return err //log.Println(err)
 	}
@@ -76,7 +79,7 @@ func listenForClients() error {
 
 //lookForClients sends out UDP packets in the hope of finding other clients
 func lookForClients() error {
-	addr, err := net.ResolveUDPAddr("udp", address)
+	addr, err := net.ResolveUDPAddr("udp", Conf.MulticastIP)
 	if err != nil {
 		return err //log.Println(err)
 	}
@@ -100,8 +103,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	if src.IP.String() == GetLocalIP() {
 		return
 	}
-	//log.Println(n, "bytes read from", src)
-	//log.Println()
+
 	body := string(b[:n])
 	if body == "remove" {
 		log.Println("Removing client", src)
@@ -136,6 +138,7 @@ func receiveClipboard() error {
 	//clean up the connection after
 	defer Close(conn)
 	for {
+		time.Sleep(1 * time.Second)
 		//blocking read
 		buffer := make([]byte, 20000)
 		buffSlice := []byte{}
@@ -155,15 +158,25 @@ func receiveClipboard() error {
 		if len(buffSlice) == 0 {
 			//break
 		} else {
-			log.Println("Setting Clipboard to", string(buffSlice))
 
-			err := clipboard.WriteAll(string(buffSlice))
+			msg := string(buffSlice)
+			split := strings.Split(msg, ":")
+			if len(split) < 2 {
+				continue
+			}
+
+			msgClip := ""
+			for i := 0; i < len(split); i++ {
+				msgClip += split[i]
+			}
+
+			log.Println("Setting Clipboard to", msgClip)
+
+			err := clipboard.WriteAll(msgClip)
 			if err != nil {
 				return err
 			}
-			cb.SetText(string(buffSlice))
-
-			time.Sleep(1 * time.Second)
+			cb.SetText(msgClip)
 		}
 	}
 }
@@ -175,10 +188,11 @@ func serveClipboard(serverIP string) error {
 	}
 
 	for {
+		time.Sleep(1 * time.Second)
+
 		ReadClipBoard, err := clipboard.ReadAll()
 		if err != nil {
 			log.Println(err)
-			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -187,13 +201,11 @@ func serveClipboard(serverIP string) error {
 			log.Println("Sending Clipboard")
 			cb.SetText(ReadClipBoard)
 
-			_, err := conn.Write([]byte(ReadClipBoard))
+			_, err := conn.Write([]byte(Conf.Username + ":" + ReadClipBoard))
 			if err != nil {
 				return err
 			}
 		}
-
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -201,12 +213,13 @@ func handleClient(serverIP string) {
 
 	//send clipboard to clients
 	for {
+		time.Sleep(1 * time.Second)
+
 		err := serveClipboard(serverIP)
 		if err != nil {
 			//check if the error means that the target is offline
 			//log.Println(err, reflect.TypeOf(err))
 			log.Println(err)
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
