@@ -65,7 +65,7 @@ func (s *Config) Delete() error {
 
 func defaultConfig() Config {
 	return Config{
-		Username:         "",
+		Username:         "cyrushanlon",
 		Password:         "",
 		RememberPassword: false,
 		MulticastIP:      "232.49.101.200:6964",

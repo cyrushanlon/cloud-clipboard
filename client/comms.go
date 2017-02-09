@@ -22,6 +22,10 @@ const (
 //Run looks and listens for cloud-clipboard clients
 func Run() {
 
+	//debug purposes only
+	Conf.Delete()
+	//
+
 	Conf.Load()
 
 	go func() {
@@ -161,7 +165,7 @@ func receiveClipboard() error {
 
 			msg := string(buffSlice)
 			split := strings.Split(msg, ":")
-			if len(split) < 2 {
+			if len(split) < 2 && Conf.Username != split[0] {
 				continue
 			}
 
