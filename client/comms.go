@@ -170,7 +170,7 @@ func receiveClipboard() error {
 			}
 
 			msgClip := ""
-			for i := 0; i < len(split); i++ {
+			for i := 1; i < len(split); i++ {
 				msgClip += split[i]
 			}
 
