@@ -119,14 +119,7 @@ func receiveClipboard() error {
 	ln, err := net.Listen("tcp4", ":6263")
 
 	//clean up the listener after
-	defer func() {
-		if ln != nil {
-			err = ln.Close()
-			if err != nil {
-				log.Println(err)
-			}
-		}
-	}()
+	defer Close(ln)
 
 	if err != nil {
 		return err
@@ -138,18 +131,10 @@ func receiveClipboard() error {
 	if err != nil {
 		return err
 	}
-
-	//clean up the connection after
-	defer func() {
-		if conn != nil {
-			err = conn.Close()
-			if err != nil {
-				log.Println(err)
-			}
-		}
-	}()
 	log.Println("got a connection!")
 
+	//clean up the connection after
+	defer Close(conn)
 	for {
 		//blocking read
 		buffer := make([]byte, 20000)
