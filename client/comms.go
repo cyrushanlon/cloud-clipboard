@@ -95,7 +95,7 @@ func lookForClients() error {
 	log.Println("Looking for servers.")
 	for {
 		//log.Println("LFC - Sending Ping")
-		_, err := c.Write([]byte("add"))
+		_, err := c.Write(AddAuthTCP("add"))
 		if err != nil {
 			return err //log.Println(err)
 		}
@@ -108,15 +108,21 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 		return
 	}
 
-	body := string(b[:n])
-	if body == "remove" {
-		log.Println("Removing client", src)
-		StringArrayRemove(&clientList, src.IP.String())
-	} else if body == "add" {
-		if !StringArrayContains(clientList, src.IP.String()) { //add if it isnt already in
-			clientList = append(clientList, src.IP.String())
-			//log.Println("Adding client", src.IP.String())
-			go handleClient(src.IP.String())
+	if authed, body := IsAuthedUDP(string(b[:n])); authed {
+		if body == "remove" {
+			log.Println("Removing client", src)
+
+			//TODO:
+			//review if this should exist
+			//Expand this to also terminate a currently handled connection
+
+			StringArrayRemove(&clientList, src.IP.String())
+		} else if body == "add" {
+			if !StringArrayContains(clientList, src.IP.String()) { //add if it isnt already in
+				clientList = append(clientList, src.IP.String())
+				//log.Println("Adding client", src.IP.String())
+				go handleClient(src.IP.String())
+			}
 		}
 	}
 }
