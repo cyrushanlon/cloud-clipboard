@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"strings"
+	"errors"
 
 	"github.com/atotto/clipboard"
 )
@@ -122,36 +122,39 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 }
 
 func receiveClipboard() error {
+	//listen for packets
 	ln, err := net.Listen("tcp4", ":6263")
-
-	//clean up the listener after
-	defer Close(ln)
-
 	if err != nil {
 		return err
 	}
-	log.Println("Listening to :6264")
+	defer Close(ln)
 
+	log.Println("Listening to :6264")
 	log.Println("Waiting for a connection...")
+
+	//listen for connections
 	conn, err := ln.Accept()
 	if err != nil {
 		return err
 	}
+	defer Close(conn)
+
 	log.Println("got a connection!")
 
-	//clean up the connection after
-	defer Close(conn)
+	//serve the connection
 	for {
 		time.Sleep(1 * time.Second)
-		//blocking read
+
 		buffer := make([]byte, 20000)
 		buffSlice := []byte{}
 
+		//read from the connection
 		_, err := conn.Read(buffer)
 		if err != nil {
 			return err
 		}
 
+		//convert the array to a slice
 		for k, v := range buffer {
 			if v == 0 {
 				buffSlice = buffer[:k]
@@ -163,24 +166,22 @@ func receiveClipboard() error {
 			//break
 		} else {
 
-			msg := string(buffSlice)
-			split := strings.Split(msg, ":")
-			if len(split) < 2 && Conf.Username != split[0] {
-				continue
-			}
+			msgRaw := string(buffSlice)
 
-			msgClip := ""
-			for i := 1; i < len(split); i++ {
-				msgClip += split[i]
-			}
+			//check that the clipboard change is from an authorised client
+			if authed, msg := IsAuthedTCP(msgRaw); authed {
 
-			log.Println("Setting Clipboard to", msgClip)
+				log.Println("Setting Clipboard to", msg)
 
-			err := clipboard.WriteAll(msgClip)
-			if err != nil {
-				return err
+				err := clipboard.WriteAll(msg)
+				if err != nil {
+					return err
+				}
+				cb.SetText(msg)
+
+			} else {
+				return errors.New("not authed")
 			}
-			cb.SetText(msgClip)
 		}
 	}
 }
@@ -205,7 +206,7 @@ func serveClipboard(serverIP string) error {
 			log.Println("Sending Clipboard")
 			cb.SetText(ReadClipBoard)
 
-			_, err := conn.Write([]byte(Conf.Username + ":" + ReadClipBoard))
+			_, err := conn.Write(AddAuthTCP(ReadClipBoard))
 			if err != nil {
 				return err
 			}
@@ -224,6 +225,10 @@ func handleClient(serverIP string) {
 			//check if the error means that the target is offline
 			//log.Println(err, reflect.TypeOf(err))
 			log.Println(err)
+			//stop handling this client for the below reasons
+			if err.Error() == "not authed" { //client is not allowed to change the local clipboard
+				return
+			} //else if err == client is offline {}
 		}
 	}
 }
