@@ -3,14 +3,13 @@ package client
 import (
 	"errors"
 	"net"
-	"reflect"
 	"time"
 
 	"github.com/atotto/clipboard"
 )
 
 var (
-	clientList []string
+	clientList map[string]Client
 	cb         = CurrentClipboard{}
 )
 
@@ -26,6 +25,7 @@ func Run() {
 	//log.SetLevel(log.DebugLevel)
 	//
 
+	clientList = make(map[string]Client)
 	Conf.Load()
 
 	go func() {
@@ -33,8 +33,10 @@ func Run() {
 			//get remote clipboard
 			err := receiveClipboard()
 			if err != nil {
+				//stop handling client if we recieve a connection reset error
 				LogWarn(err)
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
@@ -45,17 +47,17 @@ func Run() {
 			if err != nil {
 				LogWarn(err)
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
 	//send multicasts
 	for {
-		for {
-			err := lookForClients()
-			if err != nil {
-				LogWarn(err)
-			}
+		err := lookForClients()
+		if err != nil {
+			LogWarn(err)
 		}
+		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -120,13 +122,24 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 			//review if this should exist
 			//Expand this to also terminate a currently handled connection
 
-			StringArrayRemove(&clientList, src.IP.String())
+			//StringArrayRemove(&clientList, src.IP.String())
 		} else if body == "add" {
-			if !StringArrayContains(clientList, src.IP.String()) { //add if it isnt already in
-				clientList = append(clientList, src.IP.String())
-				//log.Println("Adding client", src.IP.String())
-				go handleClient(src.IP.String())
+
+			if _, ok := clientList[src.IP.String()]; !ok {
+				clientList[src.IP.String()] = Client{
+					MsgChan: make(chan string),
+					IP:      src.IP.String(),
+				}
+
+				go clientList[src.IP.String()].Handle()
 			}
+			/*
+				if !StringArrayContains(clientList, src.IP.String()) { //add if it isnt already in
+					clientList = append(clientList, src.IP.String())
+					//log.Println("Adding client", src.IP.String())
+					go handleClient(src.IP.String())
+				}
+			*/
 		}
 	}
 }
@@ -220,31 +233,6 @@ func serveClipboard(serverIP string) error {
 			if err != nil {
 				return err
 			}
-		}
-	}
-}
-
-func handleClient(serverIP string) {
-
-	//send clipboard to clients
-	for {
-		time.Sleep(1 * time.Second)
-
-		err := serveClipboard(serverIP)
-		if err != nil {
-			//check if the error means that the target is offline
-			//stop handling this client for the below reasons
-			if err.Error() == "not authed" { //client is not allowed to change the local clipboard
-				return
-			}
-
-			switch err.(type) {
-			case *net.OpError: //connection is closed at remote end
-				LogWarn(err)
-				return
-			}
-
-			LogErr(err, "|", reflect.TypeOf(err))
 		}
 	}
 }
