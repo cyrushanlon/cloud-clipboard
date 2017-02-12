@@ -1,8 +1,6 @@
 package client
 
 import (
-	"fmt"
-	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -31,10 +29,10 @@ func (s Config) Save() {
 	f, err := os.Open("config.conf")
 	if err != nil {
 		//File doesnt exist
-		log.Println("Creating config file.")
+		LogInfo("Creating config file.")
 		f, err = os.Create("config.conf")
 		if err != nil {
-			log.Println("Couldn't create the file.")
+			LogErr("Couldn't create the file.")
 			return
 		}
 	}
@@ -42,17 +40,17 @@ func (s Config) Save() {
 	enc := toml.NewEncoder(f)
 	err = enc.Encode(s)
 	if err != nil {
-		log.Println("Couldn't save to the file.")
+		LogErr("Couldn't save to the file.")
 		return
 	}
-	fmt.Println("Saved config to config file.")
+	LogInfo("Saved config to config file.")
 }
 
 //Load the config from file
 func (s *Config) Load() {
 	_, err := toml.DecodeFile("config.conf", s)
 	if err != nil {
-		log.Println("Couldn't read from the file, using defaults.")
+		LogInfo("Couldn't read from the file, using defaults.")
 		Conf = defaultConfig()
 		Conf.Save()
 	} //else {} //uses the config from the file

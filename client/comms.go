@@ -1,11 +1,10 @@
 package client
 
 import (
-	"log"
-	"net"
-	"time"
-
 	"errors"
+	"net"
+	"reflect"
+	"time"
 
 	"github.com/atotto/clipboard"
 )
@@ -24,15 +23,18 @@ func Run() {
 
 	//debug purposes only
 	Conf.Delete()
+	//log.SetLevel(log.DebugLevel)
 	//
 
 	Conf.Load()
 
 	go func() {
-		//get remote clipboard
-		err := receiveClipboard()
-		if err != nil {
-			log.Println(err)
+		for {
+			//get remote clipboard
+			err := receiveClipboard()
+			if err != nil {
+				LogWarn(err)
+			}
 		}
 	}()
 
@@ -41,16 +43,18 @@ func Run() {
 		for {
 			err := listenForClients()
 			if err != nil {
-				log.Println(err)
+				LogWarn(err)
 			}
 		}
 	}()
 
 	//send multicasts
 	for {
-		err := lookForClients()
-		if err != nil {
-			log.Println(err)
+		for {
+			err := lookForClients()
+			if err != nil {
+				LogWarn(err)
+			}
 		}
 	}
 }
@@ -70,7 +74,7 @@ func listenForClients() error {
 		return err //log.Println(err)
 	}
 
-	log.Println("Looking for clients.")
+	LogInfo("Looking for clients.")
 	for {
 		b := make([]byte, maxReadBuffer)
 		n, src, err := c.ReadFromUDP(b)
@@ -92,7 +96,7 @@ func lookForClients() error {
 		return err //log.Println(err)
 	}
 
-	log.Println("Looking for servers.")
+	LogInfo("Looking for servers.")
 	for {
 		//log.Println("LFC - Sending Ping")
 		_, err := c.Write(AddAuthTCP("add"))
@@ -110,7 +114,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 
 	if authed, body := IsAuthedUDP(string(b[:n])); authed {
 		if body == "remove" {
-			log.Println("Removing client", src)
+			LogInfo("Removing client", src)
 
 			//TODO:
 			//review if this should exist
@@ -135,8 +139,8 @@ func receiveClipboard() error {
 	}
 	defer Close(ln)
 
-	log.Println("Listening to :6264")
-	log.Println("Waiting for a connection...")
+	LogInfo("Listening to :6264")
+	LogInfo("Waiting for a connection...")
 
 	//listen for connections
 	conn, err := ln.Accept()
@@ -145,7 +149,7 @@ func receiveClipboard() error {
 	}
 	defer Close(conn)
 
-	log.Println("got a connection!")
+	LogInfo("got a connection!")
 
 	//serve the connection
 	for {
@@ -177,7 +181,7 @@ func receiveClipboard() error {
 			//check that the clipboard change is from an authorised client
 			if authed, msg := IsAuthedTCP(msgRaw); authed {
 
-				log.Println("Setting Clipboard to", msg)
+				LogInfo("Setting Clipboard to", msg)
 
 				err := clipboard.WriteAll(msg)
 				if err != nil {
@@ -203,13 +207,13 @@ func serveClipboard(serverIP string) error {
 
 		ReadClipBoard, err := clipboard.ReadAll()
 		if err != nil {
-			log.Println(err)
+			LogErr(err)
 			continue
 		}
 
 		if ReadClipBoard != cb.GetText() {
 
-			log.Println("Sending Clipboard")
+			LogInfo("Sending Clipboard")
 			cb.SetText(ReadClipBoard)
 
 			_, err := conn.Write(AddAuthTCP(ReadClipBoard))
@@ -229,12 +233,18 @@ func handleClient(serverIP string) {
 		err := serveClipboard(serverIP)
 		if err != nil {
 			//check if the error means that the target is offline
-			//log.Println(err, reflect.TypeOf(err))
-			log.Println(err)
 			//stop handling this client for the below reasons
 			if err.Error() == "not authed" { //client is not allowed to change the local clipboard
 				return
-			} //else if err == client is offline {}
+			}
+
+			switch err.(type) {
+			case *net.OpError: //connection is closed at remote end
+				LogWarn(err)
+				return
+			}
+
+			LogErr(err, "|", reflect.TypeOf(err))
 		}
 	}
 }

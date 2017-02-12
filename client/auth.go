@@ -10,9 +10,11 @@ func IsAuthedTCP(msg string) (bool, string) {
 	}
 
 	msgClip := ""
-	for i := 1; i < len(split); i++ {
-		msgClip += split[i]
+	for i := 1; i < len(split)-1; i++ {
+		msgClip += split[i] + ":"
 	}
+
+	msgClip += split[len(split)-1]
 
 	return true, msgClip
 }

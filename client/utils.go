@@ -1,6 +1,14 @@
 package client
 
-import "net"
+import (
+	"net"
+	"runtime"
+	"strings"
+
+	"fmt"
+
+	log "github.com/Sirupsen/logrus"
+)
 
 //StringArrayContains returns if the slice contains a target string
 func StringArrayContains(list []string, target string) bool {
@@ -38,4 +46,28 @@ func GetLocalIP() string {
 		}
 	}
 	return ""
+}
+
+func getLogOutput(v ...interface{}) string {
+	_, file, line, _ := runtime.Caller(2)
+
+	split := strings.Split(file, "/")
+	fileOut := split[len(split)-1]
+
+	return fmt.Sprint("[", fileOut, " ", line, "] ", fmt.Sprint(v...))
+}
+
+//LogInfo outputs info with function and line number of where it was called
+func LogInfo(v ...interface{}) {
+	log.Info(getLogOutput(v))
+}
+
+//LogErr outputs error with function and line number of where it was called
+func LogErr(v ...interface{}) {
+	log.Error(getLogOutput(v))
+}
+
+//LogWarn outputs warning with function and line number of where it was called
+func LogWarn(v ...interface{}) {
+	log.Warn(getLogOutput(v))
 }
