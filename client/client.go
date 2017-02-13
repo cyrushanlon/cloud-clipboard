@@ -60,6 +60,10 @@ func (c *Client) serveClipboard(serverIP string) error {
 				return nil
 			}
 		default:
+			if len(clientList) == 0 {
+				continue
+			}
+
 			ReadClipBoard, err := clipboard.ReadAll()
 			if err != nil {
 				if err.Error() == "exit status 1" { //clipboard is empty
