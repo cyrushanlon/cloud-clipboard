@@ -23,7 +23,7 @@ const (
 func Run() {
 
 	//debug purposes only
-	Conf.Delete()
+	//Conf.Delete()
 	//log.SetLevel(log.DebugLevel)
 	//
 

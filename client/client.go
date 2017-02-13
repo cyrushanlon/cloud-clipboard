@@ -8,11 +8,13 @@ import (
 	"github.com/atotto/clipboard"
 )
 
+//Client handles an individual clients connections
 type Client struct {
 	MsgChan chan string
 	IP      string
 }
 
+//Handle handles the sending of the local clipboard to the client
 func (c *Client) Handle() {
 
 	//send clipboard to clients
@@ -60,7 +62,9 @@ func (c *Client) serveClipboard(serverIP string) error {
 		default:
 			ReadClipBoard, err := clipboard.ReadAll()
 			if err != nil {
-				LogErr(err)
+				if err.Error() == "exit status 1" { //clipboard is empty
+					LogErr(err)
+				}
 				continue
 			}
 
