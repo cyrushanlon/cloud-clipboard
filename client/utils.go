@@ -54,7 +54,7 @@ func getLogOutput(v ...interface{}) string {
 	split := strings.Split(file, "/")
 	fileOut := split[len(split)-1]
 
-	return fmt.Sprint("[", fileOut, " ", line, "] ", fmt.Sprint(v...))
+	return fmt.Sprint("[", fileOut, " ", line, "] ", runtime.NumGoroutine(), fmt.Sprint(v...))
 }
 
 //LogInfo outputs info with function and line number of where it was called

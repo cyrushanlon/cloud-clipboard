@@ -5,11 +5,13 @@ import (
 	"net"
 	"time"
 
+	"strings"
+
 	"github.com/atotto/clipboard"
 )
 
 var (
-	clientList map[string]Client
+	clientList map[string]*Client
 	cb         = CurrentClipboard{}
 )
 
@@ -25,7 +27,7 @@ func Run() {
 	//log.SetLevel(log.DebugLevel)
 	//
 
-	clientList = make(map[string]Client)
+	clientList = make(map[string]*Client)
 	Conf.Load()
 
 	go func() {
@@ -126,7 +128,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 		} else if body == "add" {
 
 			if _, ok := clientList[src.IP.String()]; !ok {
-				clientList[src.IP.String()] = Client{
+				clientList[src.IP.String()] = &Client{
 					MsgChan: make(chan string),
 					IP:      src.IP.String(),
 				}
@@ -162,7 +164,9 @@ func receiveClipboard() error {
 	}
 	defer Close(conn)
 
-	LogInfo("got a connection!")
+	remoteIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
+
+	LogInfo("Connected to", remoteIP)
 
 	//serve the connection
 	for {
@@ -174,6 +178,13 @@ func receiveClipboard() error {
 		//read from the connection
 		_, err := conn.Read(buffer)
 		if err != nil {
+			//the connection is most likely dead
+			switch err.(type) {
+			case *net.OpError:
+				if v, ok := clientList[remoteIP]; ok {
+					v.MsgChan <- "close"
+				}
+			}
 			return err
 		}
 
@@ -204,34 +215,6 @@ func receiveClipboard() error {
 
 			} else {
 				return errors.New("not authed")
-			}
-		}
-	}
-}
-
-func serveClipboard(serverIP string) error {
-	conn, err := net.Dial("tcp", serverIP+":6263")
-	if err != nil {
-		return err
-	}
-
-	for {
-		time.Sleep(1 * time.Second)
-
-		ReadClipBoard, err := clipboard.ReadAll()
-		if err != nil {
-			LogErr(err)
-			continue
-		}
-
-		if ReadClipBoard != cb.GetText() {
-
-			LogInfo("Sending Clipboard")
-			cb.SetText(ReadClipBoard)
-
-			_, err := conn.Write(AddAuthTCP(ReadClipBoard))
-			if err != nil {
-				return err
 			}
 		}
 	}
