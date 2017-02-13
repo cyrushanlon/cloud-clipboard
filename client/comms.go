@@ -69,10 +69,13 @@ func listenForClients() error {
 	if err != nil {
 		return err //log.Println(err)
 	}
+
 	c, err := net.ListenMulticastUDP("udp", nil, addr)
 	if err != nil {
 		return err //log.Println(err)
 	}
+	defer Close(c)
+
 	err = c.SetReadBuffer(maxReadBuffer)
 	if err != nil {
 		return err //log.Println(err)
@@ -95,10 +98,12 @@ func lookForClients() error {
 	if err != nil {
 		return err //log.Println(err)
 	}
+
 	c, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
 		return err //log.Println(err)
 	}
+	defer Close(c)
 
 	LogInfo("Looking for servers.")
 	for {

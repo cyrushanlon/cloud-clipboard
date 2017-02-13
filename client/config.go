@@ -36,6 +36,7 @@ func (s Config) Save() {
 			return
 		}
 	}
+	defer Close(f)
 
 	enc := toml.NewEncoder(f)
 	err = enc.Encode(s)

@@ -50,6 +50,7 @@ func (c *Client) serveClipboard(serverIP string) error {
 	if err != nil {
 		return err
 	}
+	defer Close(conn)
 
 	for {
 		time.Sleep(1 * time.Second)
