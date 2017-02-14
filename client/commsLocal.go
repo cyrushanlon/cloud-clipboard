@@ -3,9 +3,8 @@ package client
 import (
 	"errors"
 	"net"
-	"time"
-
 	"strings"
+	"time"
 
 	"github.com/atotto/clipboard"
 )
@@ -19,16 +18,10 @@ const (
 	maxReadBuffer = 8192
 )
 
-//Run looks and listens for cloud-clipboard clients
-func Run() {
-
-	//debug purposes only
-	//Conf.Delete()
-	//log.SetLevel(log.DebugLevel)
-	//
+//RunLocal handles the udp and tcp connections of the client
+func RunLocal() {
 
 	clientList = make(map[string]*Client)
-	Conf.Load()
 
 	go func() {
 		for {
@@ -45,21 +38,25 @@ func Run() {
 	//get multicasts
 	go func() {
 		for {
-			err := listenForClients()
-			if err != nil {
-				LogWarn(err)
+			if Conf.AllowDiscovery {
+				err := listenForClients()
+				if err != nil {
+					LogWarn(err)
+				}
+				time.Sleep(1 * time.Second)
 			}
-			time.Sleep(1 * time.Second)
 		}
 	}()
 
 	//send multicasts
 	for {
-		err := lookForClients()
-		if err != nil {
-			LogWarn(err)
+		if Conf.AllowDiscovery {
+			err := lookForClients()
+			if err != nil {
+				LogWarn(err)
+			}
+			time.Sleep(1 * time.Second)
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -106,7 +103,7 @@ func lookForClients() error {
 	defer Close(c)
 
 	LogInfo("Looking for servers.")
-	for {
+	for Conf.AllowDiscovery {
 		//log.Println("LFC - Sending Ping")
 		_, err := c.Write(AddAuthTCP("add"))
 		if err != nil {
@@ -114,6 +111,8 @@ func lookForClients() error {
 		}
 		time.Sleep(1 * time.Second)
 	}
+
+	return nil
 }
 
 func msgHandler(src *net.UDPAddr, n int, b []byte) {

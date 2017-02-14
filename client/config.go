@@ -17,11 +17,16 @@ var Conf Config
 
 //Config holds application wide config variables
 type Config struct {
-	//public
+	//general
 	Username         string
 	Password         string
 	RememberPassword bool
-	MulticastIP      string
+	//UDP
+	AllowDiscovery bool
+	MulticastIP    string
+	//Server stuff
+	AllowServer bool
+	RemoteIP    string
 }
 
 //Save the config to file
@@ -67,6 +72,7 @@ func defaultConfig() Config {
 		Username:         "cyrushanlon",
 		Password:         "",
 		RememberPassword: false,
+		AllowDiscovery:   false,
 		MulticastIP:      "232.49.101.200:6964",
 	}
 }
