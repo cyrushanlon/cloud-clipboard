@@ -1,6 +1,6 @@
 package main
 
-import "github.com/cyrushanlon/cloud-clipboard/client"
+import "github.com/cyrushanlon/cloud-clipboard"
 
 func main() {
 	//check if the process is already open and if it is show

@@ -72,7 +72,7 @@ func defaultConfig() Config {
 		Username:         "cyrushanlon",
 		Password:         "",
 		RememberPassword: false,
-		AllowDiscovery:   false,
+		AllowDiscovery:   true,
 		MulticastIP:      "232.49.101.200:6964",
 	}
 }
