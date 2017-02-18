@@ -139,6 +139,8 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 					IP:      src.IP.String(),
 				}
 
+				LogInfo("Handling", src.IP.String())
+
 				go clientList[src.IP.String()].Handle()
 			}
 			/*

@@ -10,8 +10,9 @@ import (
 
 //Client handles an individual clients connections
 type Client struct {
-	MsgChan chan string
-	IP      string
+	MsgChan  chan string
+	IP       string
+	LastSent string
 }
 
 //Handle handles the sending of the local clipboard to the client
@@ -75,10 +76,11 @@ func (c *Client) serveClipboard(serverIP string) error {
 				continue
 			}
 
-			if ReadClipBoard != cb.GetText() {
+			if ReadClipBoard != c.LastSent {
 
-				LogInfo("Sending Clipboard")
+				LogInfo("Sending Clipboard to", serverIP)
 				cb.SetText(ReadClipBoard)
+				c.LastSent = ReadClipBoard
 
 				_, err := conn.Write(AddAuthTCP(ReadClipBoard))
 				if err != nil {
