@@ -192,6 +192,10 @@ func serveReceive(conn net.Conn, remoteIP string) error {
 			//check that the clipboard change is from an authorised client
 			if authed, msg := IsAuthedTCP(msgRaw); authed {
 
+				if msg == cb.GetText() {
+					continue
+				}
+
 				LogInfo("Setting Clipboard to", msg)
 
 				err := clipboard.WriteAll(msg)
