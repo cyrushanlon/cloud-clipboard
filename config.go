@@ -23,9 +23,10 @@ type Config struct {
 	RememberPassword bool
 	//UDP
 	AllowDiscovery bool
-	MulticastIP    string
 	//Server stuff
 	AllowServer bool
+	//ips
+	MulticastIP string
 	RemoteIP    string
 }
 

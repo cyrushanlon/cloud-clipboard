@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"io"
 	"net"
 	"strings"
 	"time"
@@ -154,12 +155,11 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	}
 }
 
-func serveReceive(conn net.Conn, remoteIP string) error {
+func serveReceive(conn io.Reader, remoteIP string) error {
 	for {
 		time.Sleep(1 * time.Second)
 
 		buffer := make([]byte, 20000)
-		buffSlice := []byte{}
 
 		//read from the connection
 		_, err := conn.Read(buffer)
@@ -175,13 +175,8 @@ func serveReceive(conn net.Conn, remoteIP string) error {
 			return err
 		}
 
-		//convert the array to a slice
-		for k, v := range buffer {
-			if v == 0 {
-				buffSlice = buffer[:k]
-				break
-			}
-		}
+		//trims slice to length of content
+		buffSlice := TrimBuffer(buffer) //[]byte{}
 
 		if len(buffSlice) == 0 {
 			//break
@@ -198,7 +193,7 @@ func serveReceive(conn net.Conn, remoteIP string) error {
 
 				LogInfo("Setting Clipboard to", msg)
 
-				err := clipboard.WriteAll(msg)
+				err = clipboard.WriteAll(msg)
 				if err != nil {
 					LogWarn(err)
 					return err

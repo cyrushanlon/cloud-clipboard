@@ -71,7 +71,7 @@ func (c *Client) serveClipboard(serverIP string) error {
 			ReadClipBoard, err := clipboard.ReadAll()
 			if err != nil {
 				if err.Error() != "exit status 1" { //clipboard is empty
-					LogErr(err)
+					return err
 				}
 				continue
 			}

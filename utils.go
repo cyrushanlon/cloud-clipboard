@@ -31,6 +31,20 @@ func StringArrayRemove(list *[]string, target string) {
 	}
 }
 
+//TrimBuffer takes a slice and trims it to the content
+func TrimBuffer(buffer []byte) []byte {
+	var bufferSlice []byte
+
+	for k, v := range buffer {
+		if v == 0 {
+			bufferSlice = buffer[:k]
+			break
+		}
+	}
+
+	return bufferSlice
+}
+
 // GetLocalIP returns the non loopback local IP of the host
 func GetLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
