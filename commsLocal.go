@@ -121,6 +121,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	}
 
 	if authed, body := IsAuthedUDP(string(b[:n])); authed {
+
 		if body == "remove" {
 			LogInfo("Removing client", src)
 
@@ -132,6 +133,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 		} else if body == "add" {
 
 			if _, ok := clientList[src.IP.String()]; !ok {
+
 				clientList[src.IP.String()] = &Client{
 					MsgChan: make(chan string),
 					IP:      src.IP.String(),
@@ -150,29 +152,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	}
 }
 
-func receiveClipboard() error {
-	//listen for packets
-	ln, err := net.Listen("tcp4", ":6263")
-	if err != nil {
-		return err
-	}
-	defer Close(ln)
-
-	LogInfo("Listening to :6264")
-	LogInfo("Waiting for a connection...")
-
-	//listen for connections
-	conn, err := ln.Accept()
-	if err != nil {
-		return err
-	}
-	defer Close(conn)
-
-	remoteIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
-
-	LogInfo("Connected to", remoteIP)
-
-	//serve the connection
+func serveReceive(conn net.Conn, remoteIP string) error {
 	for {
 		time.Sleep(1 * time.Second)
 
@@ -189,6 +169,7 @@ func receiveClipboard() error {
 					v.MsgChan <- "close"
 				}
 			}
+			LogWarn(err)
 			return err
 		}
 
@@ -213,13 +194,48 @@ func receiveClipboard() error {
 
 				err := clipboard.WriteAll(msg)
 				if err != nil {
+					LogWarn(err)
 					return err
 				}
 				cb.SetText(msg)
 
 			} else {
+				LogWarn(err)
 				return errors.New("not authed")
 			}
 		}
+	}
+}
+
+func receiveClipboard() error {
+	//listen for packets
+	ln, err := net.Listen("tcp4", ":6263")
+	if err != nil {
+		return err
+	}
+	defer Close(ln)
+
+	LogInfo("Listening to :6264")
+	LogInfo("Waiting for a connection...")
+
+	for {
+		//listen for connections
+		conn, err := ln.Accept()
+		if err != nil {
+			return err
+		}
+
+		remoteIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
+
+		LogInfo("Connected to", remoteIP)
+
+		//serve the connection
+		go func() {
+			err := serveReceive(conn, remoteIP)
+			if err != nil {
+				//LogWarn(err)
+			}
+			defer Close(conn)
+		}()
 	}
 }

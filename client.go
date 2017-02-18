@@ -46,6 +46,7 @@ func (c *Client) Handle() {
 }
 
 func (c *Client) serveClipboard(serverIP string) error {
+
 	conn, err := net.Dial("tcp", serverIP+":6263")
 	if err != nil {
 		return err
@@ -61,6 +62,7 @@ func (c *Client) serveClipboard(serverIP string) error {
 				return nil
 			}
 		default:
+
 			if len(clientList) == 0 {
 				continue
 			}
