@@ -14,6 +14,6 @@ func main() {
 	//run the client
 	client.Conf.Load()
 
-	go client.RunLocal()
-	client.RunRemote()
+	client.RunLocal()
+	//client.RunRemote()
 }

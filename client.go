@@ -79,13 +79,14 @@ func (c *Client) serveClipboard(serverIP string) error {
 			if ReadClipBoard != c.LastSent {
 
 				LogInfo("Sending Clipboard to", serverIP)
-				cb.SetText(ReadClipBoard)
-				c.LastSent = ReadClipBoard
 
 				_, err := conn.Write(AddAuthTCP(ReadClipBoard))
 				if err != nil {
 					return err
 				}
+				//if its ok, set the values
+				cb.SetText(ReadClipBoard)
+				c.LastSent = ReadClipBoard
 			}
 		}
 	}
