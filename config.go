@@ -73,7 +73,9 @@ func defaultConfig() Config {
 		Username:         "cyrushanlon",
 		Password:         "",
 		RememberPassword: false,
-		AllowDiscovery:   true,
+		AllowDiscovery:   false,
+		AllowServer:      true,
 		MulticastIP:      "232.49.101.200:6964",
+		RemoteIP:         "https://cloud-clipboard-server.herokuapp.com",
 	}
 }
