@@ -7,7 +7,12 @@ import (
 
 	"fmt"
 
+	"crypto/sha256"
+
+	"encoding/hex"
+
 	log "github.com/Sirupsen/logrus"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 //StringArrayContains returns if the slice contains a target string
@@ -60,6 +65,13 @@ func GetLocalIP() string {
 		}
 	}
 	return ""
+}
+
+//HashString returns hashed salted string as bytes
+func HashString(str string) string {
+	salt := []byte("fixedSaltStringThatNooneShouldBeReading")
+
+	return hex.EncodeToString(pbkdf2.Key([]byte(str), salt, 4096, sha256.Size, sha256.New))
 }
 
 func getLogOutput(v ...interface{}) string {
