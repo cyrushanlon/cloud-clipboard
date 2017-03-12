@@ -207,7 +207,6 @@ func serveReceive(conn io.Reader, remoteIP string) error {
 				cb.SetText(msg)
 
 			} else {
-				LogWarn(err)
 				return errors.New("not authed")
 			}
 		}

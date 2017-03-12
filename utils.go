@@ -14,7 +14,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
-	"encoding/base64"
 	"encoding/hex"
 
 	log "github.com/Sirupsen/logrus"
@@ -102,7 +101,8 @@ func Encrypt(text []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	b := base64.URLEncoding.EncodeToString(text)
+	//b := base64.URLEncoding.EncodeToString(text)
+	b := text
 	ciphertext := make([]byte, aes.BlockSize+len(b))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
@@ -127,10 +127,14 @@ func Decrypt(text []byte) ([]byte, error) {
 	text = text[aes.BlockSize:]
 	cfb := cipher.NewCFBDecrypter(block, iv)
 	cfb.XORKeyStream(text, text)
-	data, err := base64.URLEncoding.DecodeString(string(text))
-	if err != nil {
-		return nil, err
-	}
+	data := text
+	/*
+		data, err := base64.URLEncoding.DecodeString(string(text))
+			if err != nil {
+				LogWarn(2)
+				return nil, err
+			}
+	*/
 	return data, nil
 }
 
