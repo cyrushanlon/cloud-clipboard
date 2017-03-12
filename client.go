@@ -86,7 +86,7 @@ func (c *Client) serveClipboard(serverIP string) error {
 					continue
 				}
 
-				_, err := conn.Write(msg)
+				_, err = conn.Write(msg)
 				if err != nil {
 					return err
 				}

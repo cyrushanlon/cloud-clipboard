@@ -82,12 +82,13 @@ func HashString(str string) string {
 
 func getKey() []byte {
 	key := []byte(Conf.Password + Conf.Username)
+
 	if len(key) > 32 {
 		key = key[0:32]
 	} else if len(key) == 0 {
 
 	} else {
-		for i := len(key) - 1; i < 32; i++ {
+		for i := len(key) - 1; i < 31; i++ {
 			key = append(key, 0)
 		}
 	}

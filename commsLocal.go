@@ -104,14 +104,14 @@ func lookForClients() error {
 	defer Close(c)
 
 	LogInfo("Looking for servers.")
+	//cache message as it should never change
+	msg, err := AddAuthUDP("add")
+	if err != nil {
+		//LogErr(err)
+		return err
+	}
 	for Conf.AllowDiscovery {
 		//log.Println("LFC - Sending Ping")
-		msg, err := AddAuthTCP("add")
-		if err != nil {
-			LogErr(err)
-			continue
-		}
-
 		_, err := c.Write(msg)
 		if err != nil {
 			return err //log.Println(err)
