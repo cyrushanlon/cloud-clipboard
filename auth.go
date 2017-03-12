@@ -9,6 +9,7 @@ func IsAuthedTCP(msg []byte) (bool, string) {
 	msgDecrypted, err := Decrypt(msg)
 	if err != nil {
 		LogErr(err)
+		LogErr(msg)
 		return false, ""
 	}
 
