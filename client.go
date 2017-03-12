@@ -80,7 +80,13 @@ func (c *Client) serveClipboard(serverIP string) error {
 
 				LogInfo("Sending Clipboard to", serverIP)
 
-				_, err := conn.Write(AddAuthTCP(ReadClipBoard))
+				msg, err := AddAuthTCP(ReadClipBoard)
+				if err != nil {
+					LogErr(err)
+					continue
+				}
+
+				_, err := conn.Write(msg)
 				if err != nil {
 					return err
 				}

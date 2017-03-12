@@ -106,7 +106,13 @@ func lookForClients() error {
 	LogInfo("Looking for servers.")
 	for Conf.AllowDiscovery {
 		//log.Println("LFC - Sending Ping")
-		_, err := c.Write(AddAuthTCP("add"))
+		msg, err := AddAuthTCP("add")
+		if err != nil {
+			LogErr(err)
+			continue
+		}
+
+		_, err := c.Write(msg)
 		if err != nil {
 			return err //log.Println(err)
 		}
@@ -182,7 +188,7 @@ func serveReceive(conn io.Reader, remoteIP string) error {
 			//break
 		} else {
 
-			msgRaw := string(buffSlice)
+			msgRaw := buffSlice
 
 			//check that the clipboard change is from an authorised client
 			if authed, msg := IsAuthedTCP(msgRaw); authed {

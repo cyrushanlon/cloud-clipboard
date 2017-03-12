@@ -3,8 +3,16 @@ package client
 import "strings"
 
 //IsAuthedTCP checks a TCP clipboard change for authorisation
-func IsAuthedTCP(msg string) (bool, string) {
-	split := strings.Split(msg, ":")
+func IsAuthedTCP(msg []byte) (bool, string) {
+	//we need to decrypt the message first
+
+	msgDecrypted, err := Decrypt(msg)
+	if err != nil {
+		LogErr(err)
+		return false, ""
+	}
+
+	split := strings.Split(string(msgDecrypted), ":")
 	if len(split) < 3 && Conf.Username != split[0] {
 		return false, ""
 	} else if HashString(Conf.Password) != split[1] {
@@ -22,8 +30,8 @@ func IsAuthedTCP(msg string) (bool, string) {
 }
 
 //AddAuthTCP adds TCP clipboard change authorisation before sending
-func AddAuthTCP(msg string) []byte {
-	return []byte(Conf.Username + ":" + HashString(Conf.Password) + ":" + msg)
+func AddAuthTCP(msg string) ([]byte, error) {
+	return Encrypt([]byte(Conf.Username + ":" + HashString(Conf.Password) + ":" + msg))
 }
 
 //IsAuthedUDP checks a UDP packet for authorisation
@@ -44,6 +52,6 @@ func IsAuthedUDP(msg string) (bool, string) {
 }
 
 //AddAuthUDP checks a UDP packet for authorisation
-func AddAuthUDP(msg string) []byte {
-	return []byte(Conf.Username + ":" + HashString(Conf.Password) + ":" + msg)
+func AddAuthUDP(msg string) ([]byte, error) {
+	return Encrypt([]byte(Conf.Username + ":" + HashString(Conf.Password) + ":" + msg))
 }
