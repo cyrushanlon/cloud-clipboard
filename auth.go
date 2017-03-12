@@ -35,8 +35,14 @@ func AddAuthTCP(msg string) ([]byte, error) {
 }
 
 //IsAuthedUDP checks a UDP packet for authorisation
-func IsAuthedUDP(msg string) (bool, string) {
-	split := strings.Split(msg, ":")
+func IsAuthedUDP(msg []byte) (bool, string) {
+	msgDecrypted, err := Decrypt(msg)
+	if err != nil {
+		LogErr(err)
+		return false, ""
+	}
+
+	split := strings.Split(string(msgDecrypted), ":")
 	if len(split) < 3 && Conf.Username != split[0] {
 		return false, ""
 	} else if HashString(Conf.Password) != split[1] {

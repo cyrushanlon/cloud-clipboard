@@ -127,7 +127,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 		return
 	}
 
-	if authed, body := IsAuthedUDP(string(b[:n])); authed {
+	if authed, body := IsAuthedUDP(b[:n]); authed {
 
 		if body == "remove" {
 			LogInfo("Removing client", src)
